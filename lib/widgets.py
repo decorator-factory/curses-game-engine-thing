@@ -233,3 +233,19 @@ def screen_size_var() -> Var[int, int]:
     screen_size = Var("screen_size", (24, 80))
     screen_size.register(E_RESIZE, screen_size.change)
     return screen_size
+
+
+class Upscale(Widget):
+    def __init__(self, n: int, wrapped: Widget) -> None:
+        super().__init__()
+        assert n > 0, f"Expected a positive scale factor, got {n!r}"
+        self._n = n
+        self._wrapped = wrapped
+
+    def bubble(self, event: Event, /) -> None:
+        self._wrapped.dispatch(event.key, event.payload)
+
+    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+        n = self._n
+        for cell in self._wrapped.cells(h // n, w // n):
+            yield from Rect(cell.y*n, cell.x*n, n, n, cell.char.style, cell.char.val).cells(h, w)
