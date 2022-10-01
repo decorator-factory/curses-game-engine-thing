@@ -187,7 +187,7 @@ class Var(Widget, Generic[Unpack[P]]):
         self._last_value = initial
         self._new_value = initial
         self._changed = False
-        self._subscribers: list[tuple[EventKey[Unpack[tuple[Any, ...]]], weakref.ref[Widget]]] = []
+        self._subscribers: list[Callable[[Unpack[P]], None]] = []
         self._subvars: list[weakref.ref[Var]] = []
 
         self.register(E_TICK, self.on_tick)
@@ -235,8 +235,12 @@ class Var(Widget, Generic[Unpack[P]]):
     __mul__ = concat
 
     def subscribe(self, key: EventKey[Unpack[P]], widget: Widget) -> None:
-        self._subscribers.append((key, weakref.ref(widget)))  # type: ignore
+        ref = weakref.ref(widget)
+        self._subscribers.append(lambda *payload: w.dispatch(key, payload) if (w := ref()) else None)
         widget.dispatch(key, self._last_value)
+
+    def watch(self, cb: Callable[[Unpack[P]], None]) -> None:
+        self._subscribers.append(cb)
 
     def value(self) -> tuple[Unpack[P]]:
         return self._last_value
@@ -255,9 +259,9 @@ class Var(Widget, Generic[Unpack[P]]):
 
         self._last_value = self._new_value
         self._changed = False
-        for e, ww in self._subscribers:
-            if w := ww():
-                w.dispatch(e, self._last_value)
+        for callback in self._subscribers:
+            callback(*self._last_value)
+
 
     def cells(self, h: int, w: int, /) -> Iterable[Cell]:
         yield from ()

@@ -24,7 +24,7 @@ def _init_styles(styles: StyleDict) -> None:
         return cnum
 
     for style, (fg, bg) in styles.items():
-        curses.init_pair(style, add_color(fg), add_color(bg))
+        curses.init_pair(style.value, add_color(fg), add_color(bg))
 
 
 def _loop(win: curses._CursesWindow, root: Widget, styles: StyleDict, fps: int) -> None:
@@ -69,15 +69,15 @@ def _loop(win: curses._CursesWindow, root: Widget, styles: StyleDict, fps: int) 
 
 
 
-StyleDict = dict[int, tuple[tuple[int, int, int], tuple[int, int, int]]]
+StyleDict = dict[Style, tuple[tuple[int, int, int], tuple[int, int, int]]]
 
 
 _default_styles: StyleDict = {
-    Style.default.value: ((1000, 1000, 1000), (0, 0, 0)),
-    Style.red.value: ((1000, 1000, 1000), (1000, 0, 0)),
-    Style.green.value: ((0, 0, 0), (0, 1000, 0)),
-    Style.blue.value: ((1000, 1000, 1000), (0, 0, 1000)),
-    Style.cyan.value: ((1000, 1000, 1000), (0, 420, 1000)),
+    Style.default: ((1000, 1000, 1000), (0, 0, 0)),
+    Style.red: ((1000, 1000, 1000), (1000, 0, 0)),
+    Style.green: ((0, 0, 0), (0, 1000, 0)),
+    Style.blue: ((1000, 1000, 1000), (0, 0, 1000)),
+    Style.cyan: ((1000, 1000, 1000), (0, 420, 1000)),
 }
 
 
