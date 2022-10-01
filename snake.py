@@ -74,7 +74,7 @@ class Foods(Widget):
         if (y, x) not in self._points:
             return
         self._points.remove((y, x))
-        self._length.change(round(self._length.value()[0] * 1.5))
+        self._length.change(self._length.value()[0] + 4)
         self._spawn_food()
         self._score.change(self._score.value()[0] + 1)
 
@@ -326,7 +326,7 @@ def game():
         Reactive(score, lambda s: SimpleText(3, 3, f"Score: {s}", Style.default)),
 
         snake,
-        TickReducer(1, Snek.E_ADVANCE, snake),
+        TickReducer(3, Snek.E_ADVANCE, snake),
         OnKey({"KEY_LEFT"},  Snek.E_LEFT, snake),
         OnKey({"KEY_RIGHT"},  Snek.E_RIGHT, snake),
         OnKey({"KEY_UP"},  Snek.E_UP, snake),
