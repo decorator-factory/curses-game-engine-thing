@@ -17,11 +17,11 @@ Q = TypeVarTuple("Q")
 
 class Style(Enum):
     default = 100
-    red = 200
+    white = 200
+    red = 201
     blue = 202
-    green = 204
-
-    cyan = 206
+    green = 203
+    cyan = 204
 
 
 
