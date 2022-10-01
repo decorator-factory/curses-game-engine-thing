@@ -125,6 +125,7 @@ class Reactive(Widget, Generic[Unpack[P]]):
 class Group(Widget):
     def __init__(self, widgets: Sequence[Widget]) -> None:
         self._widgets: list[Widget] = list(widgets)
+        super().__init__()
 
     def bubble(self, event: Event[Any], /) -> None:
         for widget in self._widgets:
