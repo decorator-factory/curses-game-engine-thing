@@ -1,7 +1,8 @@
 from __future__ import annotations
+from dataclasses import dataclass
 from fractions import Fraction
-from typing import Any, Collection, Generic, Iterable, Iterator, Mapping, Sequence, TypeVar
-from typing_extensions import TypeVarTuple, Unpack
+from typing import Any, Collection, Iterable, Iterator, Mapping, Sequence, TypeVar
+from typing_extensions import TypeVarTuple, Unpack, assert_never
 from .base import E_KEY, E_RESIZE, E_TICK, Cell, Event, EventKey, Rect, Style, Var, Widget, Quit
 
 
@@ -81,11 +82,39 @@ class WidgetSequence(Widget):
         yield from active.cells(h, w)
 
 
+@dataclass(frozen=True)
+class Row:
+    frac: Fraction = Fraction(0)
+    min: int | None = None
+    max: int | None = None
+
+
+_ToRow = int | Fraction | tuple[int, int] | tuple[Fraction, int] | tuple[Fraction, int, int]
+
+
+def _to_row(raw: _ToRow) -> Row:
+    # cursed
+    match raw:
+        case int():
+            return Row(min=raw, max=raw)
+        case Fraction():
+            return Row(raw)
+        case (a, b):
+            if isinstance(a, int):
+                return Row(min=a, max=b)
+            else:
+                return Row(frac=a, min=b)
+        case (frac, minh, maxh):
+            return Row(frac, minh, maxh)
+        case invalid:
+            assert_never(invalid)
+
+
+
 class VSplit(Widget):
-    def __init__(self, rows: Sequence[tuple[Fraction, Widget]]) -> None:
+    def __init__(self, rows: Sequence[tuple[_ToRow, Widget]]) -> None:
         super().__init__()
-        self._sizes = [size for size, _ in rows]
-        assert sum(self._sizes) <= 1
+        self._sizes = [_to_row(size) for size, _ in rows]
         self._widgets = [widget for _, widget in rows]
 
     def bubble(self, event: Event, /) -> None:
@@ -98,10 +127,14 @@ class VSplit(Widget):
                 yield Cell(cell.y + oy, cell.x, cell.char)
 
 
-def _split(h: int, sizes: Sequence[Fraction]) -> Iterator[tuple[int, int]]:
+def _split(h: int, rows: Sequence[Row]) -> Iterator[tuple[int, int]]:
     left = h
-    for f in sizes:
-        dh = max(1, round(f * h))
+    for row in rows:
+        dh = max(1, round(row.frac * h))
+        if row.min is not None:
+            dh = max(row.min, dh)
+        if row.max is not None:
+            dh = min(row.max, dh)
         yield (h - left, dh)
         left -= dh
     if left > 0:
