@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Any, Collection, Iterable, Iterator, Mapping, Sequence, TypeVar
+from typing import Any, Callable, Collection, Iterable, Iterator, Mapping, Sequence, TypeVar
 from typing_extensions import TypeVarTuple, Unpack, assert_never
 from .base import E_KEY, E_RESIZE, E_TICK, Cell, Event, EventKey, Rect, Style, Var, Widget, Quit
 
@@ -101,7 +101,7 @@ def _to_row(raw: _ToRow) -> Row:
             return Row(raw)
         case (a, b):
             if isinstance(a, int):
-                return Row(min=a, max=b)
+                return Row(Fraction(1.0), min=a, max=b)
             else:
                 return Row(frac=a, min=b)
         case (frac, minh, maxh):
@@ -135,10 +135,30 @@ def _split(h: int, rows: Sequence[Row]) -> Iterator[tuple[int, int]]:
             dh = max(row.min, dh)
         if row.max is not None:
             dh = min(row.max, dh)
+        dh = min(left, dh)
         yield (h - left, dh)
         left -= dh
     if left > 0:
         yield (h - left, left)
+
+
+class VSplitAdvanced(Widget):  # naming = 100
+    def __init__(self, mk_heights: Callable[[int, int], Sequence[int]], widgets: Sequence[Widget]) -> None:
+        # mk_heights: (h, w) -> (height0, height1, height2, ...)
+        super().__init__()
+        self._widgets = widgets
+        self._mk_heights = mk_heights
+
+    def bubble(self, event: Event, /) -> None:
+        for widget in self._widgets:
+            widget.dispatch(event.key, event.payload)
+
+    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+        oy = 0
+        for dh, widget in zip(self._mk_heights(h, w), self._widgets):
+            for cell in widget.cells(dh, w):
+                yield Cell(cell.y + oy, cell.x, cell.char)
+            oy += dh
 
 
 class Proxy(Widget):
