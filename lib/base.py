@@ -166,12 +166,14 @@ class Rect(Widget):
     height: int
     width: int
     style: Style
+    char: str = " "
 
     def __post_init__(self) -> None:
         super().__init__()
+        assert len(self.char) == 1
 
     def cells(self, h: int, w: int) -> Iterator[Cell]:
-        line = " " * self.width
+        line = self.char * self.width
         for y in range(self.y, self.y + self.height):
             yield from SimpleText(y, self.x, line, self.style).cells(h, w)
 
