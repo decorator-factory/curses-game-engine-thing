@@ -56,10 +56,19 @@ def _loop(win: curses._CursesWindow, root: Widget, styles: StyleDict, fps: int) 
             return
 
         cells = root.cells(my, mx)
-        for cell in cells:
-            if cell.y < 0 or cell.x < 0 or cell.y >= my or cell.x >= mx:
-                continue
-            pad.addch(cell.y, cell.x, cell.char.val, curses.color_pair(cell.char.style.value))
+        for rect in cells:
+            y1 = rect.y
+            x1 = rect.x
+            y2 = y1 + rect.height - 1
+            x2 = x1 + rect.width - 1
+            y1 = min(max(0, y1), my)
+            x1 = min(max(0, x1), mx)
+            y2 = min(max(0, y2), my)
+            x2 = min(max(0, x2), mx)
+
+            for y in range(y1, y2+1):
+                pad.addstr(y, x1, rect.char * (x2 - x1 + 1), curses.color_pair(rect.style.value))
+
         pad.refresh(0, 0, 0, 0, my - 1, mx - 1)
         end = time.monotonic()
         to_sleep = ms/1000 - (end - start)

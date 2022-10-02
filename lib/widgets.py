@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any, Callable, Collection, Iterable, Iterator, Mapping, Sequence, TypeVar
 from typing_extensions import TypeVarTuple, Unpack, assert_never
-from .base import E_KEY, E_RESIZE, E_TICK, Cell, Event, EventKey, Rect, Style, Var, Widget, Quit
+from .base import E_KEY, E_RESIZE, E_TICK, cell, Event, EventKey, Rect, Style, Var, Widget, Quit
 
 
 _P = TypeVarTuple("_P")
@@ -75,7 +75,7 @@ class WidgetSequence(Widget):
         if not self._steps:
             self._on_done_notify.dispatch(self.E_DONE, ())
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         if not self._steps:
             return
         active = self._steps[0]
@@ -121,10 +121,10 @@ class VSplit(Widget):
         for widget in self._widgets:
             widget.dispatch(event.key, event.payload)
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         for (oy, dh), widget in zip(_split(h, self._sizes), self._widgets):
-            for cell in widget.cells(dh, w):
-                yield Cell(cell.y + oy, cell.x, cell.char)
+            for rect in widget.cells(dh, w):
+                yield Rect(rect.y + oy, rect.x, rect.height, rect.width, rect.style, rect.char)
 
 
 def _split(h: int, rows: Sequence[Row]) -> Iterator[tuple[int, int]]:
@@ -153,11 +153,11 @@ class VSplitAdvanced(Widget):  # naming = 100
         for widget in self._widgets:
             widget.dispatch(event.key, event.payload)
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         oy = 0
         for dh, widget in zip(self._mk_heights(h, w), self._widgets):
-            for cell in widget.cells(dh, w):
-                yield Cell(cell.y + oy, cell.x, cell.char)
+            for rect in widget.cells(dh, w):
+                yield Rect(rect.y + oy, rect.x, rect.height, rect.width, rect.style, rect.char)
             oy += dh
 
 
@@ -173,7 +173,7 @@ class Proxy(Widget):
         if self._wrapped:
             self._wrapped.dispatch(event.key, event.payload)
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         if self._wrapped:
             yield from self._wrapped.cells(h, w)
 
@@ -183,8 +183,8 @@ class Fill(Widget):
         super().__init__()
         self._style = style
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
-        yield from Rect(0, 0, h, w, self._style).cells(h, w)
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
+        yield Rect(0, 0, h, w, self._style)
 
 
 class WhenTrue(Widget):
@@ -245,7 +245,7 @@ class Upscale(Widget):
     def bubble(self, event: Event, /) -> None:
         self._wrapped.dispatch(event.key, event.payload)
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         n = self._n
-        for cell in self._wrapped.cells(h // n, w // n):
-            yield from Rect(cell.y*n, cell.x*n, n, n, cell.char.style, cell.char.val).cells(h, w)
+        for rect in self._wrapped.cells(h // n, w // n):
+            yield from Rect(rect.y*n, rect.x*n, n, n, rect.style, rect.char).cells(h, w)

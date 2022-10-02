@@ -24,14 +24,6 @@ class Style(Enum):
     cyan = 204
 
 
-
-@dataclass(frozen=True)
-class Cell:
-    y: int
-    x: int
-    char: Char
-
-
 class EventKey(Generic[Unpack[P]]):
     def __init__(self, name: str) -> None:
         self._name = name
@@ -78,7 +70,7 @@ class Widget:
     def bubble(self, event: Event, /) -> None:
         pass
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         return ()
 
 
@@ -92,14 +84,18 @@ class SimpleText(Widget):
     def __post_init__(self) -> None:
         super().__init__()
 
-    def cells(self, h: int, w: int) -> Iterator[Cell]:
+    def cells(self, h: int, w: int) -> Iterator[Rect]:
         if self.y >= h:
             return
 
         for x, ch in enumerate(self.text, start=self.x):
             if x >= w:
                 return
-            yield Cell(self.y, x, Char(ch, self.style))
+            yield Rect(self.y, x, 1, 1, self.style, ch)
+
+
+def cell(y: int, x: int, style: Style, char: str) -> Rect:
+    return Rect(y, x, 1, 1 ,style, char)
 
 
 class Reactive(Widget, Generic[Unpack[P]]):
@@ -118,7 +114,7 @@ class Reactive(Widget, Generic[Unpack[P]]):
     def bubble(self, event: Event[Any], /) -> None:
         self._widget.dispatch(event.key, event.payload)
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         yield from self._widget.cells(h, w)
 
 
@@ -131,33 +127,9 @@ class Group(Widget):
         for widget in self._widgets:
             widget.dispatch(event.key, event.payload)
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         for widget in self._widgets:
             yield from widget.cells(h, w)
-
-
-@dataclass
-class Hline(Widget):
-    y: int
-    text: str
-    style: Style
-
-    def __post_init__(self) -> None:
-        super().__init__()
-
-    def cells(self, h: int, w: int) -> Iterator[Cell]:
-        if self.y >= h:
-            return
-
-        if w > len(self.text):
-            start_x = (w - len(self.text))//2
-        else:
-            start_x = 0
-
-        for _, (x, ch) in zip(range(w), enumerate(self.text, start=start_x)):
-            if x >= w:
-                return
-            yield Cell(self.y, x, Char(ch, self.style))
 
 
 @dataclass
@@ -173,10 +145,23 @@ class Rect(Widget):
         super().__init__()
         assert len(self.char) == 1
 
-    def cells(self, h: int, w: int) -> Iterator[Cell]:
-        line = self.char * self.width
-        for y in range(self.y, self.y + self.height):
-            yield from SimpleText(y, self.x, line, self.style).cells(h, w)
+    def cells(self, h: int, w: int) -> Iterator[Rect]:
+        y2 = self.y + h
+        if y2 >= h:
+            rh = self.height - (y2 - h + 1)
+        else:
+            rh = self.height
+
+        x2 = self.x + w
+        if x2 >= w:
+            rw = self.width - (x2 - w + 1)
+        else:
+            rw = self.width
+
+        if rw <= 0 or rh <= 0:
+            return
+
+        yield Rect(self.y, self.x, h, w, self.style, self.char)
 
 
 T = TypeVar("T")
@@ -266,7 +251,7 @@ class Var(Widget, Generic[Unpack[P]]):
             callback(*self._last_value)
 
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         yield from ()
 
 

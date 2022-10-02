@@ -4,7 +4,7 @@ import random
 import time
 from typing_extensions import Unpack
 from lib.entrypoint import run
-from lib.base import E_KEY, EventKey, Widget, Var, Reactive, SimpleText, Rect, Style, Event, E_RESIZE, E_TICK, Cell, Quit
+from lib.base import E_KEY, EventKey, Widget, Var, Reactive, SimpleText, Rect, Style, Event, E_RESIZE, E_TICK, Quit
 from typing import Callable, Iterable, Sequence
 
 void_event = EventKey[Unpack[tuple[()]]]
@@ -78,9 +78,9 @@ class Foods(Widget):
         self._spawn_food()
         self._score.change(self._score.value()[0] + 1)
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         for y, x in self._points:
-            yield from Rect(y, x*2, 1, 2, Style.green).cells(h, w)
+            yield Rect(y, x*2, 1, 2, Style.green)
 
 
 class Snek(Widget):
@@ -175,9 +175,9 @@ class Snek(Widget):
             self._dir = (0, -1)
             self._resting = True
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         for y, x in self._body:
-            yield from Rect(y, x*2, 1, 2, Style.red).cells(h, w)
+            yield Rect(y, x*2, 1, 2, Style.red)
 
 
 class TickReducer(Widget):
@@ -235,7 +235,7 @@ class Seqw(Widget):
         if not self._steps:
             raise Quit
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         active = self._steps[0]
         yield from active.cells(h, w)
 
@@ -249,7 +249,7 @@ class Group(Widget):
         for ch in self._children:
             ch.dispatch(event.key, event.payload)
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         for ch in self._children:
             yield from ch.cells(h, w)
 
@@ -259,7 +259,7 @@ class Onhw(Widget):
         super().__init__()
         self._fn = fn
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         yield from self._fn(h, w).cells(h, w)
 
 
@@ -290,7 +290,7 @@ class Proxy(Widget):
         if self._wrapped:
             self._wrapped.dispatch(event.key, event.payload)
 
-    def cells(self, h: int, w: int, /) -> Iterable[Cell]:
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         if self._wrapped:
             yield from self._wrapped.cells(h, w)
 
