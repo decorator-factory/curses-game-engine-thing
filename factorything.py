@@ -100,10 +100,34 @@ class Direction(Enum):
 E_CONTROL = EventKey[Direction]("control")
 
 
+class Offset(Widget):
+    def __init__(self, y: int, x: int, wrapped: Widget) -> None:
+        super().__init__()
+        self._y = y
+        self._x = x
+        self._wrapped = wrapped
+
+    def bubble(self, event: Event, /) -> None:
+        self._wrapped.dispatch(event.key, event.payload)
+
+    def cells(self, h: int, w: int, /) -> Iterable[Rect]:
+        for rect in self._wrapped.cells(h, w):
+            yield Rect(rect.y + self._y, rect.x + self._x, rect.height, rect.width, rect.style, rect.char)
+
+
+class Entities:
+    def __init__(self, entities: list[tuple[Widget, int, int]]) -> None:
+        self.entities = entities
+
+    def at(self, y: int, x: int) -> Widget | None:
+        return next((e for e, ey, ex in self.entities if (y, x) == (ey, ex)), None)
+
+
 class TileView(Widget):
-    def __init__(self, view_pos: Var[int, int], world: Map) -> None:
+    def __init__(self, view_pos: Var[int, int], world: Map, e: Entities) -> None:
         super().__init__()
         self._world = world
+        self._e = e
         self._view_pos = view_pos
         self._ticks = 0
         self.register(E_TICK, self._on_tick)
@@ -115,8 +139,12 @@ class TileView(Widget):
         vy, vx = self._view_pos.value()
         tl, br = fit(screen=Point(h//2, w//2), view_center=Point(vy, vx))
         for y, x in self._world.rect(tl, br):
-            tile = self._world.at(y, x)
-            r = render_tile(self._ticks, (y - tl.y)*2, (x - tl.x)*2, tile)
+            e = self._e.at(y, x)
+            if e is not None:
+                r = Offset((y - tl.y)*2, (x - tl.x)*2, e)
+            else:
+                tile = self._world.at(y, x)
+                r = render_tile(self._ticks, (y - tl.y)*2, (x - tl.x)*2, tile)
             yield from r.cells(h, w)
 
 
@@ -182,12 +210,19 @@ def game() -> Widget:
             Direction.right: (0, 1),
             Direction.left: (0, -1),
         }[ctl]
-        pos.change(y + dy, x + dx)
+        nx, ny = x+dx, y+dy
+        if nx < 0 or ny < 0 or nx >= mep.width or ny >= mep.height:
+            return
+        if mep.at(ny, nx) == Tile.water:
+            return
+        pos.change(ny, nx)
 
     pos.register(E_CONTROL, on_control)
-
+    mep = Map(tiles)
     widgets = [
-        TileView(pos, Map(tiles)),
+        TileView(pos, mep, Entities([
+            (Rect(0, 0, 2, 2, Style.white, "?"), 3, 3),
+        ])),
         bus,
         KeyMap({
             "w": Event(E_CONTROL, (Direction.up,)),
