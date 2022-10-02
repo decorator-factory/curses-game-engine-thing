@@ -22,6 +22,7 @@ class Style(Enum):
     blue = 202
     green = 203
     cyan = 204
+    dim = 205
 
 
 class EventKey(Generic[Unpack[P]]):
