@@ -147,7 +147,23 @@ class Rect(Widget):
         assert len(self.char) == 1
 
     def cells(self, h: int, w: int) -> Iterator[Rect]:
-        yield self
+        y = self.y
+        x = self.x
+        rh = self.height
+        rw = self.width
+        if x <= 0:
+            rw += x
+            x = 0
+        if y <= 0:
+            rh += y
+            y = 0
+        if x + rw >= w:
+            rw = w - x
+        if y + rh >= h:
+            rh = h - y
+
+        if rw > 0 and rh > 0:
+            yield Rect(y, x, rh, rw, self.style, self.char)
 
 
 T = TypeVar("T")
