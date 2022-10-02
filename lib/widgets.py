@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any, Callable, Collection, Iterable, Iterator, Mapping, Sequence, TypeVar
 from typing_extensions import TypeVarTuple, Unpack, assert_never
-from .base import E_KEY, E_RESIZE, E_TICK, cell, Event, EventKey, Rect, Style, Var, Widget, Quit
+from .base import E_KEY, E_RESIZE, E_TICK, Event, EventKey, Rect, Var, Widget, Quit
 
 
 _P = TypeVarTuple("_P")
@@ -179,7 +179,7 @@ class Proxy(Widget):
 
 
 class Fill(Widget):
-    def __init__(self, style: Style) -> None:
+    def __init__(self, style: object) -> None:
         super().__init__()
         self._style = style
 

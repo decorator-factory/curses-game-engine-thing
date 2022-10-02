@@ -80,7 +80,7 @@ class SimpleText(Widget):
     y: int
     x: int
     text: str
-    style: Style
+    style: object
 
     def __post_init__(self) -> None:
         super().__init__()
@@ -95,7 +95,7 @@ class SimpleText(Widget):
             yield Rect(self.y, x, 1, 1, self.style, ch)
 
 
-def cell(y: int, x: int, style: Style, char: str) -> Rect:
+def cell(y: int, x: int, style: object, char: str) -> Rect:
     return Rect(y, x, 1, 1 ,style, char)
 
 
@@ -139,7 +139,7 @@ class Rect(Widget):
     x: int
     height: int
     width: int
-    style: Style
+    style: object
     char: str = " "
 
     def __post_init__(self) -> None:
@@ -258,11 +258,11 @@ class Var(Widget, Generic[Unpack[P]]):
 
 
 class Char:
-    def __init__(self, val: str, style: Style) -> None:
+    def __init__(self, val: str, style: object) -> None:
         if len(val) != 1:
             raise ValueError(f"{val=}")
         self.val = val
         self.style = style
 
     def __repr__(self) -> str:
-        return f"Char({self.val!r}, Style.{self.style.name})"
+        return f"Char({self.val!r}, {self.style!r})"
