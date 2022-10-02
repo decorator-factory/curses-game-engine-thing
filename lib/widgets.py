@@ -248,4 +248,4 @@ class Upscale(Widget):
     def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         n = self._n
         for rect in self._wrapped.cells(h // n, w // n):
-            yield from Rect(rect.y*n, rect.x*n, n, n, rect.style, rect.char).cells(h, w)
+            yield Rect(rect.y*n, rect.x*n, n, n, rect.style, rect.char)
