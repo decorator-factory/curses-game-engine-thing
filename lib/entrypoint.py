@@ -61,10 +61,10 @@ def _loop(win: curses._CursesWindow, root: Widget, styles: StyleDict, fps: int) 
             x1 = rect.x
             y2 = y1 + rect.height - 1
             x2 = x1 + rect.width - 1
-            y1 = min(max(0, y1), my)
-            x1 = min(max(0, x1), mx)
-            y2 = min(max(0, y2), my)
-            x2 = min(max(0, x2), mx)
+            y1 = min(max(0, y1), my - 1)
+            x1 = min(max(0, x1), mx - 1)
+            y2 = min(max(0, y2), my - 1)
+            x2 = min(max(0, x2), mx - 1)
 
             for y in range(y1, y2+1):
                 pad.addstr(y, x1, rect.char * (x2 - x1 + 1), curses.color_pair(rect.style.value))
