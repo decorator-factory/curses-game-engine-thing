@@ -15,7 +15,6 @@ def _loop(win: curses._CursesWindow, root: Widget, styles: Styles, fps: int) -> 
     root.dispatch(E_RESIZE, (my, mx))
 
     styles.execute()
-    # raise ValueError(f"{styles._to_color=} {styles._to_pair=}")
 
     while True:
         start = time.monotonic()
