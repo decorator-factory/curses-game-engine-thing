@@ -22,6 +22,7 @@ from lib.base import (
     Widget
 )
 from lib.entrypoint import run
+from lib.widgets import TickReducer
 
 
 E_QUIT = EventKey("snake.quit")
@@ -200,24 +201,6 @@ class Snek(Widget):
     def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         for y, x in self._body:
             yield Rect(y, x*2, 1, 2, Style.red)
-
-
-class TickReducer(Widget):
-    def __init__(self, n: int, event: EventKey, wrapped: Widget) -> None:
-        super().__init__()
-        if n <= 0:
-            raise ValueError(f"{n=}, expected at least 1")
-        self._n = n
-        self._wrapped = wrapped
-        self._event = event
-        self._tick = 0
-        self.register(E_TICK, lambda _: self.on_tick())
-
-    def on_tick(self) -> None:
-        self._tick += 1
-        if self._tick >= self._n:
-            self._wrapped.dispatch(self._event)
-            self._tick = 0
 
 
 class Boundary(Widget):
