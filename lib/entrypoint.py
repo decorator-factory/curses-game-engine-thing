@@ -1,9 +1,17 @@
 from __future__ import annotations
+
 import curses
 import time
 from typing import Iterable
 
-from lib.base import E_RESIZE, E_KEY, E_TICK, Quit, Style, Widget
+from lib.base import (
+    E_KEY,
+    E_RESIZE,
+    E_TICK,
+    Quit,
+    Style,
+    Widget
+)
 
 
 def _loop(win: curses._CursesWindow, root: Widget, styles: Styles, fps: int) -> None:
@@ -105,7 +113,12 @@ _default_styles: list[tuple[Style, Rgb, Rgb]] = [
 ]
 
 
-def run(root_widget: Widget, *, fps: int = 30, extra_styles: Iterable[tuple[object, Rgb, Rgb]] = ()) -> None:
+def run(
+    root_widget: Widget,
+    *,
+    fps: int = 30,
+    extra_styles: Iterable[tuple[object, Rgb, Rgb]] = (),
+) -> None:
     styles = Styles()
     for style in _default_styles:
         styles.add(*style)

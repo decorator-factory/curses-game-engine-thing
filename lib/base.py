@@ -1,10 +1,23 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from enum import Enum
-from typing import Any, Callable, Generic, Iterable, Iterator, Sequence, overload
-from typing_extensions import Never, TypeVar
+
 import uuid
 import weakref
+from dataclasses import dataclass
+from enum import Enum
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Iterable,
+    Iterator,
+    Sequence,
+    overload
+)
+
+from typing_extensions import (
+    Never,
+    TypeVar
+)
 
 
 E = TypeVar("E", default=None)

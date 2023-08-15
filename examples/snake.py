@@ -1,11 +1,27 @@
 from __future__ import annotations
-import math
+
 import random
-import time
-from typing_extensions import Unpack
+from typing import (
+    Callable,
+    Iterable,
+    Sequence
+)
+
+from lib.base import (
+    E_KEY,
+    E_RESIZE,
+    E_TICK,
+    Event,
+    EventKey,
+    Quit,
+    Reactive,
+    Rect,
+    SimpleText,
+    Style,
+    Var,
+    Widget
+)
 from lib.entrypoint import run
-from lib.base import E_KEY, EventKey, Widget, Var, Reactive, SimpleText, Rect, Style, Event, E_RESIZE, E_TICK, Quit
-from typing import Callable, Iterable, Sequence
 
 
 E_QUIT = EventKey("snake.quit")
@@ -90,7 +106,14 @@ class Snek(Widget):
     E_ADVANCE = EventKey("snake.advance")
     E_REVERSE = EventKey("snake.reverse")
 
-    def __init__(self, y: int, x: int, head_pos: Var[tuple[int, int]], length: Var[int], dead: Var[bool]) -> None:
+    def __init__(
+        self,
+        y: int,
+        x: int,
+        head_pos: Var[tuple[int, int]],
+        length: Var[int],
+        dead: Var[bool],
+    ) -> None:
         super().__init__()
         self._body = [(y, x - d) for d in range(2)]
         self._dir = (0, 1)  # dy, dx
@@ -200,7 +223,12 @@ class TickReducer(Widget):
 class Boundary(Widget):
     E_UPDATE = EventKey[tuple[int, int]]("boundary.update")
 
-    def __init__(self, head_pos: Var[tuple[int, int]], hw: Var[tuple[int, int]], dead: Var[bool]) -> None:
+    def __init__(
+        self,
+        head_pos: Var[tuple[int, int]],
+        hw: Var[tuple[int, int]],
+        dead: Var[bool],
+    ) -> None:
         super().__init__()
         self._head_pos = head_pos
         self._hw = hw
@@ -311,9 +339,24 @@ def game():
     seqw = Proxy()
 
     start_screen = Group([
-        Onhw(lambda h, w: SimpleText(h//2, w//2 - 8, "Use arrow keys to turn the snake", Style.default)),
-        Onhw(lambda h, w: SimpleText(h//2+2, w//2 - 8, "Press <Q> to give up", Style.default)),
-        Onhw(lambda h, w: SimpleText(h//2+4, w//2 - 8, "Press <Enter> to start!", Style.default)),
+        Onhw(lambda h, w: SimpleText(
+            h//2,
+            w//2 - 8,
+            "Use arrow keys to turn the snake",
+            Style.default,
+        )),
+        Onhw(lambda h, w: SimpleText(
+            h//2+2,
+            w//2 - 8,
+            "Press <Q> to give up",
+            Style.default,
+        )),
+        Onhw(lambda h, w: SimpleText(
+            h//2+4,
+            w//2 - 8,
+            "Press <Enter> to start!",
+            Style.default,
+        )),
 
         OnKey({"^J", "KEY_ENTER"}, Seqw.E_NEXT, seqw),
         OnKey({"q", "Q"}, E_QUIT, QuitHandler()),
@@ -346,7 +389,12 @@ def game():
     ])
 
     lost = Group([
-        Reactive(score, lambda s: Onhw(lambda h, w: SimpleText(h//2, w//2 - 8, f"Game over! Score: {s}", Style.default))),
+        Reactive(score, lambda s: Onhw(lambda h, w: SimpleText(
+            h//2,
+            w//2 - 8,
+            f"Game over! Score: {s}",
+            Style.default,
+        ))),
         Onhw(lambda h, w: SimpleText(h//2 + 2, w//2 - 8, "Press <Q> to exit", Style.default)),
         OnKey({"q", "Q"}, E_QUIT, QuitHandler()),
         score,

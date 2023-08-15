@@ -1,11 +1,38 @@
 from __future__ import annotations
+
 from enum import Enum
-from math import sin, cos
-from typing import Iterable, Iterator, NamedTuple, Sequence
+from math import (
+    cos,
+    sin
+)
+from typing import (
+    Iterable,
+    Iterator,
+    NamedTuple,
+    Sequence
+)
+
 from typing_extensions import assert_never
-from lib.base import E_TICK, Event, EventKey, Group, Rect, Style, Var, Widget, cell
+
+from lib.base import (
+    E_TICK,
+    Event,
+    EventKey,
+    Group,
+    Rect,
+    Style,
+    Var,
+    Widget,
+    cell
+)
 from lib.entrypoint import run
-from lib.widgets import Bus, Fill, GiveUp, KeyMap, VSplitAdvanced
+from lib.widgets import (
+    Bus,
+    Fill,
+    GiveUp,
+    KeyMap,
+    VSplitAdvanced
+)
 
 
 class Point(NamedTuple):
@@ -112,7 +139,14 @@ class Offset(Widget):
 
     def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         for rect in self._wrapped.cells(h, w):
-            yield Rect(rect.y + self._y, rect.x + self._x, rect.height, rect.width, rect.style, rect.char)
+            yield Rect(
+                y=rect.y + self._y,
+                x=rect.x + self._x,
+                height=rect.height,
+                width=rect.width,
+                style=rect.style,
+                char=rect.char,
+            )
 
 
 class Entities:

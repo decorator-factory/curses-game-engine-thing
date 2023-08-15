@@ -1,9 +1,31 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Any, Callable, Collection, Iterable, Iterator, Mapping, Sequence, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Iterable,
+    Iterator,
+    Mapping,
+    Sequence,
+    TypeVar
+)
+
 from typing_extensions import assert_never
-from .base import E_KEY, E_RESIZE, E_TICK, Event, EventKey, Rect, Var, Widget, Quit
+
+from .base import (
+    E_KEY,
+    E_RESIZE,
+    E_TICK,
+    Event,
+    EventKey,
+    Quit,
+    Rect,
+    Var,
+    Widget
+)
 
 
 _T = TypeVar("_T")
@@ -92,7 +114,6 @@ _ToRow = int | Fraction | tuple[int, int] | tuple[Fraction, int] | tuple[Fractio
 
 
 def _to_row(raw: _ToRow) -> Row:
-    # cursed
     match raw:
         case int():
             return Row(min=raw, max=raw)
@@ -107,7 +128,6 @@ def _to_row(raw: _ToRow) -> Row:
             return Row(frac, minh, maxh)
         case invalid:
             assert_never(invalid)
-
 
 
 class VSplit(Widget):
@@ -141,8 +161,12 @@ def _split(h: int, rows: Sequence[Row]) -> Iterator[tuple[int, int]]:
         yield (h - left, left)
 
 
-class VSplitAdvanced(Widget):  # naming = 100
-    def __init__(self, mk_heights: Callable[[int, int], Sequence[int]], widgets: Sequence[Widget]) -> None:
+class VSplitAdvanced(Widget):
+    def __init__(
+        self,
+        mk_heights: Callable[[int, int], Sequence[int]],
+        widgets: Sequence[Widget],
+    ) -> None:
         # mk_heights: (h, w) -> (height0, height1, height2, ...)
         super().__init__()
         self._widgets = widgets
