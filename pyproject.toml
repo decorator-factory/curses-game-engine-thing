@@ -1,0 +1,21 @@
+[project]
+name = "curses_game_engine_thing"
+version = "0.0.1"
+authors = [
+  { name="decorator-factory", email="decorator-factory@protonmail.com" },
+]
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "typing_extensions>=4.4.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/decorator-factory/curses-game-engine-thing"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

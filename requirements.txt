@@ -1,3 +1,0 @@
-# python at least 3.10
-
-typing-extensions>=4.4.0
