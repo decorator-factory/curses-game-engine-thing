@@ -7,7 +7,7 @@ from typing import (
     Sequence
 )
 
-from lib.base import (
+from cget.base import (
     E_KEY,
     E_RESIZE,
     E_TICK,
@@ -21,8 +21,8 @@ from lib.base import (
     Var,
     Widget
 )
-from lib.entrypoint import run
-from lib.widgets import TickReducer
+from cget.entrypoint import run
+from cget.widgets import TickReducer
 
 
 E_QUIT = EventKey("snake.quit")

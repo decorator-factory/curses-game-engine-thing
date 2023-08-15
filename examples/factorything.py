@@ -14,7 +14,7 @@ from typing import (
 
 from typing_extensions import assert_never
 
-from lib.base import (
+from cget.base import (
     E_TICK,
     Event,
     EventKey,
@@ -25,8 +25,8 @@ from lib.base import (
     Widget,
     cell
 )
-from lib.entrypoint import run
-from lib.widgets import (
+from cget.entrypoint import run
+from cget.widgets import (
     Bus,
     Fill,
     GiveUp,

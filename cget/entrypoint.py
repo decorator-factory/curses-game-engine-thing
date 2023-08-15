@@ -4,7 +4,7 @@ import curses
 import time
 from typing import Iterable
 
-from lib.base import (
+from .base import (
     E_KEY,
     E_RESIZE,
     E_TICK,
