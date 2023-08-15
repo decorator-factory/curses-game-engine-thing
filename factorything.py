@@ -124,13 +124,13 @@ class Entities:
 
 
 class TileView(Widget):
-    def __init__(self, view_pos: Var[int, int], world: Map, e: Entities) -> None:
+    def __init__(self, view_pos: Var[tuple[int, int]], world: Map, e: Entities) -> None:
         super().__init__()
         self._world = world
         self._e = e
         self._view_pos = view_pos
         self._ticks = 0
-        self.register(E_TICK, self._on_tick)
+        self.register(E_TICK, lambda _: self._on_tick())
 
     def _on_tick(self) -> None:
         self._ticks += 1
@@ -200,7 +200,8 @@ tiles = [
 
 def game() -> Widget:
     bus = Bus()
-    pos = bus.var("pos", (5, 10))
+
+    pos: Var[tuple[int, int]] = bus.var("pos", (5, 10))
 
     def on_control(ctl: Direction) -> None:
         y, x = pos.value()
@@ -215,7 +216,7 @@ def game() -> Widget:
             return
         if mep.at(ny, nx) == Tile.water:
             return
-        pos.change(ny, nx)
+        pos.change((ny, nx))
 
     pos.register(E_CONTROL, on_control)
     mep = Map(tiles)
@@ -225,10 +226,10 @@ def game() -> Widget:
         ])),
         bus,
         KeyMap({
-            "w": Event(E_CONTROL, (Direction.up,)),
-            "s": Event(E_CONTROL, (Direction.down,)),
-            "d": Event(E_CONTROL, (Direction.right,)),
-            "a": Event(E_CONTROL, (Direction.left,)),
+            "w": Event(E_CONTROL, Direction.up),
+            "s": Event(E_CONTROL, Direction.down),
+            "d": Event(E_CONTROL, Direction.right),
+            "a": Event(E_CONTROL, Direction.left),
         }, bus),
         GiveUp(),
         Character(),

@@ -2,11 +2,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any, Callable, Collection, Iterable, Iterator, Mapping, Sequence, TypeVar
-from typing_extensions import TypeVarTuple, Unpack, assert_never
+from typing_extensions import assert_never
 from .base import E_KEY, E_RESIZE, E_TICK, Event, EventKey, Rect, Var, Widget, Quit
 
 
-_P = TypeVarTuple("_P")
 _T = TypeVar("_T")
 
 
@@ -22,7 +21,7 @@ class GiveUp(Widget):
 
 
 class OnKey(Widget):
-    def __init__(self, keys: Iterable[str], event: EventKey[()], target: Widget) -> None:
+    def __init__(self, keys: Iterable[str], event: EventKey, target: Widget) -> None:
         super().__init__()
         self._keys = set(keys)
         self._wrapped = target
@@ -31,11 +30,11 @@ class OnKey(Widget):
 
     def on_key(self, key: str) -> None:
         if key in self._keys:
-            self._wrapped.dispatch(self._event, ())
+            self._wrapped.dispatch(self._event)
 
 
 class TickReducer(Widget):
-    def __init__(self, n: int, event: EventKey[()], wrapped: Widget) -> None:
+    def __init__(self, n: int, event: EventKey, wrapped: Widget) -> None:
         super().__init__()
         if n <= 0:
             raise ValueError(f"{n=}, expected at least 1")
@@ -43,24 +42,24 @@ class TickReducer(Widget):
         self._wrapped = wrapped
         self._event = event
         self._tick = 0
-        self.register(E_TICK, self.on_tick)
+        self.register(E_TICK, lambda _: self.on_tick())
 
     def on_tick(self) -> None:
         self._tick += 1
         if self._tick >= self._n:
-            self._wrapped.dispatch(self._event, ())
+            self._wrapped.dispatch(self._event)
             self._tick = 0
 
 
 class WidgetSequence(Widget):
-    E_NEXT: EventKey[()] = EventKey("sequence.next")
-    E_DONE: EventKey[()] = EventKey("sequence.done")
+    E_NEXT = EventKey("sequence.next")
+    E_DONE = EventKey("sequence.done")
 
     def __init__(self, steps: Sequence[Widget], on_done_notify: Widget = Widget()):
         super().__init__()
         self._steps = list(steps)
         self._on_done_notify = on_done_notify
-        self.register(self.E_NEXT, self.on_next)
+        self.register(self.E_NEXT, lambda _: self.on_next())
 
     def bubble(self, event: Event, /) -> None:
         if not self._steps:
@@ -73,7 +72,7 @@ class WidgetSequence(Widget):
             return
         self._steps.pop(0)
         if not self._steps:
-            self._on_done_notify.dispatch(self.E_DONE, ())
+            self._on_done_notify.dispatch(self.E_DONE)
 
     def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         if not self._steps:
@@ -188,7 +187,7 @@ class Fill(Widget):
 
 
 class WhenTrue(Widget):
-    def __init__(self, var: Var[bool], event: EventKey[()], widget: Widget) -> None:
+    def __init__(self, var: Var[bool], event: EventKey, widget: Widget) -> None:
         super().__init__()
         var.watch(self._on_change)
         self._e = event
@@ -196,7 +195,7 @@ class WhenTrue(Widget):
 
     def _on_change(self, value: bool) -> None:
         if value:
-            self._widget.dispatch(self._e, ())
+            self._widget.dispatch(self._e)
 
 
 class Bus(Widget):
@@ -211,14 +210,14 @@ class Bus(Widget):
         for widget in self._widgets:
             widget.dispatch(event.key, event.payload)
 
-    def var(self, name: str, default: tuple[Unpack[_P]]) -> Var[Unpack[_P]]:
+    def var(self, name: str, default: _T) -> Var[_T]:
         v = Var(name, default)
         self.listen(v)
         return v
 
 
 class KeyMap(Widget):
-    def __init__(self, keymap: Mapping[str, Event[Unpack[tuple[Any, ...]]]], target: Widget) -> None:
+    def __init__(self, keymap: Mapping[str, Event[Any]], target: Widget) -> None:
         super().__init__()
         self._keymap = {k.lower(): v for k, v in keymap.items()}
         self._target = target
@@ -229,8 +228,8 @@ class KeyMap(Widget):
             self._target.dispatch(control.key, control.payload)  # type: ignore
 
 
-def screen_size_var() -> Var[int, int]:
-    screen_size = Var("screen_size", (24, 80))
+def screen_size_var() -> Var[tuple[int, int]]:
+    screen_size: Var[tuple[int, int]] = Var("screen_size", (24, 80))
     screen_size.register(E_RESIZE, screen_size.change)
     return screen_size
 

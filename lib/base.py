@@ -1,18 +1,13 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Generic, Iterable, Iterator, Sequence, TypeVar
-from typing_extensions import Never, TypeVarTuple, Unpack
+from typing import Any, Callable, Generic, Iterable, Iterator, Sequence, overload
+from typing_extensions import Never, TypeVar
+import uuid
 import weakref
 
-if TYPE_CHECKING:
-    from curses import _CursesWindow as Win
-else:
-    Win = object
 
-
-P = TypeVarTuple("P")
-Q = TypeVarTuple("Q")
+E = TypeVar("E", default=None)
 
 
 class Style(Enum):
@@ -25,30 +20,35 @@ class Style(Enum):
     dim = 205
 
 
-class EventKey(Generic[Unpack[P]]):
+class EventKey(Generic[E]):
     def __init__(self, name: str) -> None:
         self._name = name
+        self._uid = f"{name}:{uuid.uuid4()}"
 
     @property
     def name(self) -> str:
         return self._name
 
+    @property
+    def unique_id(self) -> str:
+        return self._uid
 
-E_TICK = EventKey[Unpack[tuple[()]]]("base.tick")
-E_RESIZE = EventKey[int, int]("base.resize")
+
+E_TICK = EventKey("base.tick")
+E_RESIZE = EventKey[tuple[int, int]]("base.resize")
 E_KEY = EventKey[str]("base.key")
 E_NEVER = EventKey[Never]("base.never")
 
 _E_CHANGE = {}
 
-def e_change(_t: type[EventKey[Unpack[P]]], prefix="base._change", /) -> EventKey[Unpack[P]]:
-    return _E_CHANGE.setdefault(prefix, _t)  # type: ignore
+def e_change(_t: type[EventKey[E]], prefix="base._change", /) -> EventKey[E]:
+    return _E_CHANGE.setdefault(prefix, _t)
 
 
 @dataclass(frozen=True)
-class Event(Generic[Unpack[P]]):
-    key: EventKey[Unpack[P]]
-    payload: tuple[Unpack[P]]
+class Event(Generic[E]):
+    key: EventKey[E]
+    payload: E
 
 
 class Quit(BaseException):
@@ -57,18 +57,26 @@ class Quit(BaseException):
 
 class Widget:
     def __init__(self) -> None:
-        self._handlers: dict[EventKey, Callable[..., None]] = {}
+        self._handlers: dict[EventKey[Any], Callable[[Any], None]] = {}
 
-    def register(self, key: EventKey[Unpack[P]], handler: Callable[[Unpack[P]], None]) -> None:
+    def register(self, key: EventKey[E], handler: Callable[[E], None]) -> None:
         self._handlers[key] = handler
 
-    def dispatch(self, key: EventKey[Unpack[P]], payload: tuple[Unpack[P]]) -> None:
-        if h := self._handlers.get(key):
-            h(*payload)
-        else:
-            self.bubble(Event(key, payload))  # type: ignore
+    @overload
+    def dispatch(self, key: EventKey[None], payload: None = ...) -> None:
+        ...
 
-    def bubble(self, event: Event, /) -> None:
+    @overload
+    def dispatch(self, key: EventKey[E], payload: E) -> None:
+        ...
+
+    def dispatch(self, key: EventKey[E], payload: Any = None) -> None:
+        if h := self._handlers.get(key):
+            h(payload)
+        else:
+            self.bubble(Event(key, payload))
+
+    def bubble(self, event: Event[Any], /) -> None:
         pass
 
     def cells(self, h: int, w: int, /) -> Iterable[Rect]:
@@ -99,24 +107,24 @@ def cell(y: int, x: int, style: object, char: str) -> Rect:
     return Rect(y, x, 1, 1 ,style, char)
 
 
-class Reactive(Widget, Generic[Unpack[P]]):
-    def __init__(self, var: Var[Unpack[P]], fn: Callable[[Unpack[P]], Widget]) -> None:
+class Reactive(Widget, Generic[E]):
+    def __init__(self, var: Var[E], fn: Callable[[E], Widget]) -> None:
         super().__init__()
         self._fn = fn
         self._var = var
-        self._widget = fn(*var.value())
-        key = e_change(EventKey[Unpack[P]])
-        self.register(key, self.on_change)
+        self._widget = fn(var.value())
+        key = e_change(EventKey[E])
+        self.register(key, self._on_change)
         var.subscribe(key, self)
 
-    def on_change(self, *new_state: Unpack[P]) -> None:
-        self._widget = self._fn(*new_state)
+    def _on_change(self, new_state: E, /) -> None:
+        self._widget = self._fn(new_state)
 
     def bubble(self, event: Event[Any], /) -> None:
         self._widget.dispatch(event.key, event.payload)
 
     def cells(self, h: int, w: int, /) -> Iterable[Rect]:
-        yield from self._widget.cells(h, w)
+        return self._widget.cells(h, w)
 
 
 class Group(Widget):
@@ -170,72 +178,69 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 
-class Var(Widget, Generic[Unpack[P]]):
-    def __init__(self, name: str, initial: tuple[Unpack[P]]) -> None:
+class Var(Widget, Generic[T]):
+    def __init__(self, name: str, initial: T) -> None:
         super().__init__()
         self._name = name
         self._last_value = initial
         self._new_value = initial
         self._changed = False
-        self._subscribers: list[Callable[[Unpack[P]], None]] = []
+        self._subscribers: list[Callable[[T], None]] = []
         self._subvars: list[weakref.ref[Var]] = []
 
-        self.register(E_TICK, self.on_tick)
+        self.register(E_TICK, lambda _: self.on_tick())
 
-    def derive(self, fn: Callable[[Unpack[P]], tuple[Unpack[Q]]]) -> Var[Unpack[Q]]:
-        dv = Var(f"{self._name} >> _", fn(*self._last_value))
+    def derive(self, fn: Callable[[T], U]) -> Var[U]:
+        dv = Var(f"{self._name} >> _", fn(self._last_value))
 
-        def on_change(*p: Unpack[P]) -> None:
-            dv.change(*fn(*p))
+        def on_change(new_value: T) -> None:
+            dv.change(fn(new_value))
             dv.on_tick()
 
-        k = e_change(EventKey[Unpack[P]])
+        k = e_change(EventKey[T])
         dv.register(k, on_change)
         self.subscribe(k, dv)
         return dv
 
-    __rshift__ = derive
+    def concat(self, other: Var[U], /) -> Var[tuple[T, U]]:
+        tu = (self._last_value, other._last_value)
+        cv= Var(f"{self._name} * {other._name}", tu)
+        key_t = e_change(EventKey[T], "base.change_t")
+        key_u = e_change(EventKey[U], "base.change_u")
 
-    def __or__(self: "Var[T]", other: Callable[[T], U]) -> Var[U]:
-        return self >> (lambda t: (other(t),))
+        def on_t_change(new_value: T) -> None:
+            cv.change((new_value, cv._new_value[1]))
 
-    def concat(self, other: Var[Unpack[Q]], /) -> Var[Unpack[P], Unpack[Q]]:
-        cv = Var(f"{self._name} * {other._name}", (*self._last_value, *other._last_value))
-        keyp = e_change(EventKey[Unpack[P]], "base.change_p")
-        keyq = e_change(EventKey[Unpack[Q]], "base.change_q")
+        def on_u_change(new_value: U) -> None:
+            cv.change((cv._new_value[0], new_value))
 
-        def on_p_change(*p: Unpack[P]) -> None:
-            pq = list(cv._new_value)
-            pq[:len(p)] = p  # type: ignore
-            cv.change(*pq)  # type: ignore
-
-        def on_q_change(*q: Unpack[Q]) -> None:
-            pq = list(cv._new_value)
-            pq[-len(q):] = q  # type: ignore
-            cv.change(*pq)  # type: ignore
-
-        cv.register(keyp, on_p_change)
-        cv.register(keyq, on_q_change)
-        self.subscribe(keyp, cv)
-        other.subscribe(keyq, cv)
+        cv.register(key_t, on_t_change)
+        cv.register(key_u, on_u_change)
+        self.subscribe(key_t, cv)
+        other.subscribe(key_u, cv)
         self._subvars.append(weakref.ref(cv))
         other._subvars.append(weakref.ref(cv))
         return cv
 
     __mul__ = concat
 
-    def subscribe(self, key: EventKey[Unpack[P]], widget: Widget) -> None:
+    def subscribe(self, key: EventKey[T], widget: Widget) -> None:
         ref = weakref.ref(widget)
-        self._subscribers.append(lambda *payload: w.dispatch(key, payload) if (w := ref()) else None)
+
+        def propagate_change(payload: T) -> None:
+            if w := ref():
+                w.dispatch(key, payload)
+
+        self._subscribers.append(propagate_change)
         widget.dispatch(key, self._last_value)
 
-    def watch(self, cb: Callable[[Unpack[P]], None]) -> None:
+    def watch(self, cb: Callable[[T], None]) -> None:
         self._subscribers.append(cb)
 
-    def value(self) -> tuple[Unpack[P]]:
+    def value(self) -> T:
         return self._last_value
 
-    def change(self, *payload: Unpack[P]) -> None:
+    def change(self, payload: T) -> None:
         self._changed = True
         self._new_value = payload
 
@@ -250,11 +255,10 @@ class Var(Widget, Generic[Unpack[P]]):
         self._last_value = self._new_value
         self._changed = False
         for callback in self._subscribers:
-            callback(*self._last_value)
-
+            callback(self._last_value)
 
     def cells(self, h: int, w: int, /) -> Iterable[Rect]:
-        yield from ()
+        return ()
 
 
 class Char:

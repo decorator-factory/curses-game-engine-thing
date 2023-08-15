@@ -28,9 +28,9 @@ def _loop(win: curses._CursesWindow, root: Widget, styles: Styles, fps: int) -> 
                 if key == "KEY_RESIZE":
                     root.dispatch(E_RESIZE, (my, mx))
                 else:
-                    root.dispatch(E_KEY, (key,))
+                    root.dispatch(E_KEY, key)
 
-            root.dispatch(E_TICK, ())
+            root.dispatch(E_TICK)
         except Quit:
             return
 

@@ -7,22 +7,21 @@ from lib.entrypoint import run
 from lib.base import E_KEY, EventKey, Widget, Var, Reactive, SimpleText, Rect, Style, Event, E_RESIZE, E_TICK, Quit
 from typing import Callable, Iterable, Sequence
 
-void_event = EventKey[Unpack[tuple[()]]]
 
-E_QUIT = void_event("snake.quit")
+E_QUIT = EventKey("snake.quit")
 
 
 class QuitHandler(Widget):
     def __init__(self) -> None:
         super().__init__()
-        self.register(E_QUIT, self.on_quit)
+        self.register(E_QUIT, lambda _: self.on_quit())
 
     def on_quit(self) -> None:
         raise Quit
 
 
 class OnKey(Widget):
-    def __init__(self, keys: Iterable[str], event: EventKey[()], wrapped: Widget) -> None:
+    def __init__(self, keys: Iterable[str], event: EventKey, wrapped: Widget) -> None:
         super().__init__()
         self._keys = set(keys)
         self._wrapped = wrapped
@@ -31,16 +30,16 @@ class OnKey(Widget):
 
     def on_key(self, key: str) -> None:
         if key in self._keys:
-            self._wrapped.dispatch(self._event, ())
+            self._wrapped.dispatch(self._event)
 
 
 class Foods(Widget):
-    E_NEW_HEAD_POS =  EventKey[int, int]("snake.foods.new_head")
+    E_NEW_HEAD_POS =  EventKey[tuple[int, int]]("snake.foods.new_head")
 
     def __init__(
         self,
-        screen_size: Var[int, int],
-        head_pos: Var[int, int],
+        screen_size: Var[tuple[int, int]],
+        head_pos: Var[tuple[int, int]],
         length: Var[int],
         score: Var[int],
     ) -> None:
@@ -55,7 +54,7 @@ class Foods(Widget):
         head_pos.subscribe(self.E_NEW_HEAD_POS, self)
         self.register(self.E_NEW_HEAD_POS, self._eat)
 
-        self.register(E_TICK, self._on_tick)
+        self.register(E_TICK, lambda _: self._on_tick())
 
     def _on_tick(self) -> None:
         if self._screen_size.value() != (0, 0) and not self._points:
@@ -70,13 +69,13 @@ class Foods(Widget):
                 break
         self._points.add(new_point)
 
-    def _eat(self, y: int, x: int) -> None:
-        if (y, x) not in self._points:
+    def _eat(self, pos: tuple[int, int]) -> None:
+        if pos not in self._points:
             return
-        self._points.remove((y, x))
-        self._length.change(self._length.value()[0] + 4)
+        self._points.remove(pos)
+        self._length.change(self._length.value() + 4)
         self._spawn_food()
-        self._score.change(self._score.value()[0] + 1)
+        self._score.change(self._score.value() + 1)
 
     def cells(self, h: int, w: int, /) -> Iterable[Rect]:
         for y, x in self._points:
@@ -84,29 +83,29 @@ class Foods(Widget):
 
 
 class Snek(Widget):
-    E_UP = void_event("snake.up")
-    E_DOWN = void_event("snake.down")
-    E_RIGHT = void_event("snake.right")
-    E_LEFT = void_event("snake.left")
-    E_ADVANCE = void_event("snake.advance")
-    E_REVERSE = void_event("snake.reverse")
+    E_UP = EventKey("snake.up")
+    E_DOWN = EventKey("snake.down")
+    E_RIGHT = EventKey("snake.right")
+    E_LEFT = EventKey("snake.left")
+    E_ADVANCE = EventKey("snake.advance")
+    E_REVERSE = EventKey("snake.reverse")
 
-    def __init__(self, y: int, x: int, head_pos: Var[int, int], length: Var[int], dead: Var[bool]) -> None:
+    def __init__(self, y: int, x: int, head_pos: Var[tuple[int, int]], length: Var[int], dead: Var[bool]) -> None:
         super().__init__()
         self._body = [(y, x - d) for d in range(2)]
         self._dir = (0, 1)  # dy, dx
-        self.register(Snek.E_RIGHT, self.on_right)
-        self.register(Snek.E_LEFT, self.on_left)
-        self.register(Snek.E_UP, self.on_up)
-        self.register(Snek.E_DOWN, self.on_down)
-        self.register(Snek.E_ADVANCE, self.on_advance)
-        self.register(Snek.E_REVERSE, self.on_reverse)
+        self.register(Snek.E_RIGHT, lambda _: self.on_right())
+        self.register(Snek.E_LEFT, lambda _: self.on_left())
+        self.register(Snek.E_UP, lambda _: self.on_up())
+        self.register(Snek.E_DOWN, lambda _: self.on_down())
+        self.register(Snek.E_ADVANCE, lambda _: self.on_advance())
+        self.register(Snek.E_REVERSE, lambda _: self.on_reverse())
         self._head_pos = head_pos
         self._length = length
         self._resting = False
-        self._mq: list[void_event] = []
+        self._mq: list[EventKey] = []
         length.change(len(self._body))
-        head_pos.change(y, x)
+        head_pos.change((y, x))
         self._dead = dead
 
     def on_advance(self) -> None:
@@ -121,18 +120,18 @@ class Snek(Widget):
             new_body.append((y + dy, x + dx))
             last_y, last_x = y, x
 
-        if self._length.value()[0] > len(self._body):
+        if self._length.value() > len(self._body):
             new_body.append(self._body[-1])
 
         self._body = new_body
         hy, hx = self._body[0]
-        self._head_pos.change(hy, hx)
+        self._head_pos.change((hy, hx))
 
         if len(self._body) != len(set(self._body)):
             self._dead.change(True)
 
         if self._mq:
-            self.dispatch(self._mq.pop(0), ())
+            self.dispatch(self._mq.pop(0))
 
     def on_reverse(self) -> None:
         if self._resting:
@@ -181,7 +180,7 @@ class Snek(Widget):
 
 
 class TickReducer(Widget):
-    def __init__(self, n: int, event: EventKey[()], wrapped: Widget) -> None:
+    def __init__(self, n: int, event: EventKey, wrapped: Widget) -> None:
         super().__init__()
         if n <= 0:
             raise ValueError(f"{n=}, expected at least 1")
@@ -189,19 +188,19 @@ class TickReducer(Widget):
         self._wrapped = wrapped
         self._event = event
         self._tick = 0
-        self.register(E_TICK, self.on_tick)
+        self.register(E_TICK, lambda _: self.on_tick())
 
     def on_tick(self) -> None:
         self._tick += 1
         if self._tick >= self._n:
-            self._wrapped.dispatch(self._event, ())
+            self._wrapped.dispatch(self._event)
             self._tick = 0
 
 
 class Boundary(Widget):
-    E_UPDATE = EventKey[int, int]("boundary.update")
+    E_UPDATE = EventKey[tuple[int, int]]("boundary.update")
 
-    def __init__(self, head_pos: Var[int, int], hw: Var[int, int], dead: Var[bool]) -> None:
+    def __init__(self, head_pos: Var[tuple[int, int]], hw: Var[tuple[int, int]], dead: Var[bool]) -> None:
         super().__init__()
         self._head_pos = head_pos
         self._hw = hw
@@ -219,12 +218,12 @@ class Boundary(Widget):
 
 
 class Seqw(Widget):
-    E_NEXT = void_event("one_of.next")
+    E_NEXT = EventKey("one_of.next")
 
     def __init__(self, steps: Sequence[Widget]):
         super().__init__()
         self._steps = list(steps)
-        self.register(self.E_NEXT, self.on_next)
+        self.register(self.E_NEXT, lambda _: self.on_next())
 
     def bubble(self, event: Event, /) -> None:
         active = self._steps[0]
@@ -266,7 +265,7 @@ class Onhw(Widget):
 class WhenTrue(Widget):
     E_CHANGE = EventKey[bool]("when_true.change")
 
-    def __init__(self, var: Var[bool], event: void_event, widget: Widget) -> None:
+    def __init__(self, var: Var[bool], event: EventKey, widget: Widget) -> None:
         super().__init__()
         self.register(self.E_CHANGE, self.on_change)
         var.subscribe(self.E_CHANGE, self)
@@ -275,7 +274,7 @@ class WhenTrue(Widget):
 
     def on_change(self, value: bool) -> None:
         if value:
-            self._widget.dispatch(self._e, ())
+            self._widget.dispatch(self._e)
 
 
 class Proxy(Widget):
@@ -296,14 +295,14 @@ class Proxy(Widget):
 
 
 def game():
-    length = Var("length", (0,))
-    head_pos = Var("head_pos", (0, 0))
-    score = Var("score", (0,))
-    dead = Var("dead", (False,))
+    length: Var[int] = Var("length", 0)
+    head_pos: Var[tuple[int, int]] = Var("head_pos", (0, 0))
+    score: Var[int] = Var("score", 0)
+    dead: Var[bool] = Var("dead", False)
 
     snake = Snek(3, 5, head_pos, length, dead)
 
-    screen_size = Var("screen_size", (0, 0))
+    screen_size: Var[tuple[int, int]] = Var("screen_size", (0, 0))
     screen_size.register(E_RESIZE, screen_size.change)
 
     foods = Foods(screen_size, head_pos, length, score)
